@@ -35,7 +35,7 @@ static const int HEAD_LN  = 60;            // hairline under header
 static const int COL_DIV  = 285;           // left | right vertical divider
 static const int FC_LN    = 183;           // hairline under forecast
 static const int STAT_LN  = 487;           // hairline above status bar
-static const int LCX      = 144;           // left-column centre (10..278)
+static const int LCX      = 120;           // left-column centre (10..278)
 
 // ---------------------------------------------------------------------------
 //  Text helpers — always measure before drawing (no overlaps).
@@ -76,14 +76,15 @@ static int degRadius(const GFXfont *f, uint8_t sz) {
     return constrain((int)bh / 7, 2, 8);
 }
 static int degAdvance(const GFXfont *f, uint8_t sz) {
-    return 2 + 2 * degRadius(f, sz) + 1;
+    int r = degRadius(f, sz);
+    return (2 + r) + 2 * r + 1;     // leading gap (2+r) scales with font size
 }
 static int degreeMark(int xRight, int yBase, const GFXfont *f, uint8_t sz) {
     display.setFont(f); display.setTextSize(sz);
     int16_t bx, by; uint16_t bw, bh;
     display.getTextBounds("0", 0, 0, &bx, &by, &bw, &bh);
     int r  = constrain((int)bh / 7, 2, 8);
-    int cx = xRight + 2 + r;
+    int cx = xRight + (2 + r) + r;                 // gap (2+r) -> bigger on big text
     int cy = yBase + by + r;                       // by < 0 -> near glyph top
     display.fillCircle(cx, cy, r, COLOR_FG);
     if (r >= 4) display.fillCircle(cx, cy, r - 2, COLOR_BG);   // hollow ring
@@ -155,7 +156,7 @@ static void drawCurrentConditions(const WeatherData &w) {
     textCentered(LCX, 202, weatherDescription(w.weatherCode), F_COND);
 
     // current-weather icon (left) and umbrella widget (right) share the band
-    drawWeatherIcon(18, 210, 100, iconForCode(w.weatherCode),
+    drawWeatherIcon(10, 210, 100, iconForCode(w.weatherCode),
                     COLOR_FG, COLOR_ACCENT);
 
     // umbrella widget — driven by max precip probability over next 12 h
@@ -171,7 +172,7 @@ static void drawCurrentConditions(const WeatherData &w) {
         bool closed  = (popMax >= 30 && popMax < 70);   // furled umbrella
         bool crossed = (popMax < 30);                   // open + big X
 
-        drawUmbrella(200, 212, 70, closed, crossed, COLOR_FG);
+        drawUmbrella(184, 212, 70, closed, crossed, COLOR_FG);
 
         char u[40];
         if (popMax < 30)
@@ -182,7 +183,7 @@ static void drawCurrentConditions(const WeatherData &w) {
             snprintf(u, sizeof(u), "Pioggia ~%02d:00 (%d%%)", popHour, popMax);
         else
             snprintf(u, sizeof(u), "Pioggia (%d%%)", popMax);
-        textCentered(200, 300, u, F_UMB);
+        textCentered(184, 300, u, F_UMB);
     }
 
     // 8-cell stats grid (2 cols x 4 rows), y 326..478
@@ -194,7 +195,7 @@ static void drawCurrentConditions(const WeatherData &w) {
              uvDescription(w.uvIndex));
     snprintf(sPres, sizeof(sPres), "%d hPa", (int)lroundf(w.pressure));
 
-    const int c0 = 14, c1 = 148, rowH = 38, gy = 326;
+    const int c0 = 10, c1 = 144, rowH = 38, gy = 326;
     statCell(c0, gy + 0*rowH, StatIcon::Sunrise,    "Alba",       w.sunrise);
     statCell(c1, gy + 0*rowH, StatIcon::Sunset,     "Tramonto",   w.sunset);
     statCell(c0, gy + 1*rowH, StatIcon::Wind,       "Vento",      sWind);
