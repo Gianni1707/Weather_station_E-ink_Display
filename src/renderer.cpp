@@ -35,7 +35,7 @@ static const int HEAD_LN  = 60;            // hairline under header
 static const int COL_DIV  = 285;           // left | right vertical divider
 static const int FC_LN    = 183;           // hairline under forecast
 static const int STAT_LN  = 487;           // hairline above status bar
-static const int LCX      = 144;           // left-column centre (10..278)
+static const int LCX      = 120;           // left-column centre (10..278)
 
 // ---------------------------------------------------------------------------
 //  Text helpers — always measure before drawing (no overlaps).
@@ -67,6 +67,42 @@ static void textRight(int xRight, int yBase, const char *s,
     textAt(xRight - strW(f, sz, s), yBase, s, f, sz);
 }
 
+// Centre `s` on `cx`, never clipping past the left edge.
+static void textCenteredClamped(int cx, int yBase, const char *s,
+                                const GFXfont *f) {
+    int x = cx - strW(f, 1, s) / 2;
+    if (x < MARGIN) x = MARGIN;
+    textAt(x, yBase, s, f);
+}
+
+// Weather-condition label under the icon: one line at `ySingle` if it fits in
+// `maxW`, otherwise split at the last space that still fits -> two tight lines
+// (`y1` above, `y2` below). Centred on `cx`, clamped to the left edge.
+static void drawCondition(int cx, const char *s, const GFXfont *f,
+                          int maxW, int ySingle, int y1, int y2) {
+    if (strW(f, 1, s) <= maxW) {
+        textCenteredClamped(cx, ySingle, s, f);
+        return;
+    }
+    char buf[40];
+    snprintf(buf, sizeof(buf), "%s", s);
+    int split = -1;                         // last space whose prefix fits
+    for (int i = 0; buf[i]; ++i) {
+        if (buf[i] == ' ') {
+            buf[i] = '\0';
+            if (strW(f, 1, buf) <= maxW) split = i;
+            buf[i] = ' ';
+        }
+    }
+    if (split <= 0) {                       // unsplittable: one clamped line
+        textCenteredClamped(cx, ySingle, s, f);
+        return;
+    }
+    buf[split] = '\0';
+    textCenteredClamped(cx, y1, buf,            f);
+    textCenteredClamped(cx, y2, buf + split + 1, f);
+}
+
 // Degree mark: a crisp FILLED ring (FreeFonts have no '\xB0' glyph), raised
 // toward the cap-height of the preceding digits. Returns x just past it.
 static int degRadius(const GFXfont *f, uint8_t sz) {
@@ -76,14 +112,15 @@ static int degRadius(const GFXfont *f, uint8_t sz) {
     return constrain((int)bh / 7, 2, 8);
 }
 static int degAdvance(const GFXfont *f, uint8_t sz) {
-    return 2 + 2 * degRadius(f, sz) + 1;
+    int r = degRadius(f, sz);
+    return (2 + r) + 2 * r + 1;     // leading gap (2+r) scales with font size
 }
 static int degreeMark(int xRight, int yBase, const GFXfont *f, uint8_t sz) {
     display.setFont(f); display.setTextSize(sz);
     int16_t bx, by; uint16_t bw, bh;
     display.getTextBounds("0", 0, 0, &bx, &by, &bw, &bh);
     int r  = constrain((int)bh / 7, 2, 8);
-    int cx = xRight + 2 + r;
+    int cx = xRight + (2 + r) + r;                 // gap (2+r) -> bigger on big text
     int cy = yBase + by + r;                       // by < 0 -> near glyph top
     display.fillCircle(cx, cy, r, COLOR_FG);
     if (r >= 4) display.fillCircle(cx, cy, r - 2, COLOR_BG);   // hollow ring
@@ -152,10 +189,9 @@ static void drawCurrentConditions(const WeatherData &w) {
         degreeMark(x + bw, 178, F_FEELS, 1);
     }
 
-    textCentered(LCX, 202, weatherDescription(w.weatherCode), F_COND);
-
-    // current-weather icon (left) and umbrella widget (right) share the band
-    drawWeatherIcon(18, 210, 100, iconForCode(w.weatherCode),
+    // current-weather icon (left) and umbrella widget (right) share the band;
+    // the condition label is drawn UNDER the icon (see below).
+    drawWeatherIcon(10, 188, 100, iconForCode(w.weatherCode),
                     COLOR_FG, COLOR_ACCENT);
 
     // umbrella widget — driven by max precip probability over next 12 h
@@ -171,21 +207,29 @@ static void drawCurrentConditions(const WeatherData &w) {
         bool closed  = (popMax >= 30 && popMax < 70);   // furled umbrella
         bool crossed = (popMax < 30);                   // open + big X
 
-        drawUmbrella(200, 212, 70, closed, crossed, COLOR_FG);
+        drawUmbrella(184, 208, 70, closed, crossed, COLOR_FG);
 
         char u[40];
         if (popMax < 30)
-            snprintf(u, sizeof(u), "Niente pioggia (%d%%)", popMax);
+            snprintf(u, sizeof(u), "No pioggia (%d%%)", popMax);
         else if (popMax < 70)
             snprintf(u, sizeof(u), "Forse pioggia (%d%%)", popMax);
         else if (popHour >= 0)
             snprintf(u, sizeof(u), "Pioggia ~%02d:00 (%d%%)", popHour, popMax);
         else
             snprintf(u, sizeof(u), "Pioggia (%d%%)", popMax);
-        textCentered(200, 300, u, F_UMB);
+        textCentered(184, 296, u, F_UMB);
     }
 
-    // 8-cell stats grid (2 cols x 4 rows), y 326..478
+    // weather condition UNDER the icon (centre x=60), beside "No pioggia":
+    // small 9pt font, single line when it fits, else wrapped to two tight
+    // lines. The block is centred on y=296 so it stays aligned with the
+    // umbrella caption whether it is one or two lines. maxW keeps it clear
+    // of the umbrella caption at x=184.
+    drawCondition(60, weatherDescription(w.weatherCode), &FreeSans9pt7b,
+                  /*maxW*/90, /*ySingle*/296, /*y1*/288, /*y2*/303);
+
+    // 6-cell stats grid (2 cols x 3 rows), y 326..~467
     char sWind[16], sHum[8], sUv[16], sPres[12];
     snprintf(sWind, sizeof(sWind), "%d km/h %s",
              (int)lroundf(w.windSpeed), windCompass(w.windDir));
@@ -194,15 +238,13 @@ static void drawCurrentConditions(const WeatherData &w) {
              uvDescription(w.uvIndex));
     snprintf(sPres, sizeof(sPres), "%d hPa", (int)lroundf(w.pressure));
 
-    const int c0 = 14, c1 = 148, rowH = 38, gy = 326;
+    const int c0 = 10, c1 = 144, rowH = 54, gy = 326;
     statCell(c0, gy + 0*rowH, StatIcon::Sunrise,    "Alba",       w.sunrise);
     statCell(c1, gy + 0*rowH, StatIcon::Sunset,     "Tramonto",   w.sunset);
     statCell(c0, gy + 1*rowH, StatIcon::Wind,       "Vento",      sWind);
     statCell(c1, gy + 1*rowH, StatIcon::Humidity,   "Umidita",    sHum);
     statCell(c0, gy + 2*rowH, StatIcon::Uv,         "Indice UV",  sUv);
     statCell(c1, gy + 2*rowH, StatIcon::Pressure,   "Pressione",  sPres);
-    statCell(c0, gy + 3*rowH, StatIcon::Visibility, "Visibilita", "N/D");
-    statCell(c1, gy + 3*rowH, StatIcon::AirQuality, "Qualita Aria","N/D");
 
     // column divider
     display.drawLine(COL_DIV, HEAD_LN + 4, COL_DIV, STAT_LN - 2, COLOR_FG);
