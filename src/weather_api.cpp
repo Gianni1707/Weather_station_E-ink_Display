@@ -204,12 +204,12 @@ const char *weatherDescription(int code) {
         case 71:
         case 73:
         case 75: return "Neve";
-        case 77: return "Granuli di neve";
+        case 77: return "Granuli neve";
         case 80:
         case 81:
         case 82: return "Rovesci";
         case 85:
-        case 86: return "Rovesci di neve";
+        case 86: return "Rovesci neve";
         case 95: return "Temporale";
         case 96:
         case 99: return "Temp. grandine";

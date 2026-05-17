@@ -67,6 +67,42 @@ static void textRight(int xRight, int yBase, const char *s,
     textAt(xRight - strW(f, sz, s), yBase, s, f, sz);
 }
 
+// Centre `s` on `cx`, never clipping past the left edge.
+static void textCenteredClamped(int cx, int yBase, const char *s,
+                                const GFXfont *f) {
+    int x = cx - strW(f, 1, s) / 2;
+    if (x < MARGIN) x = MARGIN;
+    textAt(x, yBase, s, f);
+}
+
+// Weather-condition label under the icon: one line at `ySingle` if it fits in
+// `maxW`, otherwise split at the last space that still fits -> two tight lines
+// (`y1` above, `y2` below). Centred on `cx`, clamped to the left edge.
+static void drawCondition(int cx, const char *s, const GFXfont *f,
+                          int maxW, int ySingle, int y1, int y2) {
+    if (strW(f, 1, s) <= maxW) {
+        textCenteredClamped(cx, ySingle, s, f);
+        return;
+    }
+    char buf[40];
+    snprintf(buf, sizeof(buf), "%s", s);
+    int split = -1;                         // last space whose prefix fits
+    for (int i = 0; buf[i]; ++i) {
+        if (buf[i] == ' ') {
+            buf[i] = '\0';
+            if (strW(f, 1, buf) <= maxW) split = i;
+            buf[i] = ' ';
+        }
+    }
+    if (split <= 0) {                       // unsplittable: one clamped line
+        textCenteredClamped(cx, ySingle, s, f);
+        return;
+    }
+    buf[split] = '\0';
+    textCenteredClamped(cx, y1, buf,            f);
+    textCenteredClamped(cx, y2, buf + split + 1, f);
+}
+
 // Degree mark: a crisp FILLED ring (FreeFonts have no '\xB0' glyph), raised
 // toward the cap-height of the preceding digits. Returns x just past it.
 static int degRadius(const GFXfont *f, uint8_t sz) {
@@ -153,10 +189,9 @@ static void drawCurrentConditions(const WeatherData &w) {
         degreeMark(x + bw, 178, F_FEELS, 1);
     }
 
-    textCentered(LCX, 202, weatherDescription(w.weatherCode), F_COND);
-
-    // current-weather icon (left) and umbrella widget (right) share the band
-    drawWeatherIcon(10, 210, 100, iconForCode(w.weatherCode),
+    // current-weather icon (left) and umbrella widget (right) share the band;
+    // the condition label is drawn UNDER the icon (see below).
+    drawWeatherIcon(10, 188, 100, iconForCode(w.weatherCode),
                     COLOR_FG, COLOR_ACCENT);
 
     // umbrella widget — driven by max precip probability over next 12 h
@@ -172,21 +207,29 @@ static void drawCurrentConditions(const WeatherData &w) {
         bool closed  = (popMax >= 30 && popMax < 70);   // furled umbrella
         bool crossed = (popMax < 30);                   // open + big X
 
-        drawUmbrella(184, 212, 70, closed, crossed, COLOR_FG);
+        drawUmbrella(184, 208, 70, closed, crossed, COLOR_FG);
 
         char u[40];
         if (popMax < 30)
-            snprintf(u, sizeof(u), "Niente pioggia (%d%%)", popMax);
+            snprintf(u, sizeof(u), "No pioggia (%d%%)", popMax);
         else if (popMax < 70)
             snprintf(u, sizeof(u), "Forse pioggia (%d%%)", popMax);
         else if (popHour >= 0)
             snprintf(u, sizeof(u), "Pioggia ~%02d:00 (%d%%)", popHour, popMax);
         else
             snprintf(u, sizeof(u), "Pioggia (%d%%)", popMax);
-        textCentered(184, 300, u, F_UMB);
+        textCentered(184, 296, u, F_UMB);
     }
 
-    // 8-cell stats grid (2 cols x 4 rows), y 326..478
+    // weather condition UNDER the icon (centre x=60), beside "No pioggia":
+    // small 9pt font, single line when it fits, else wrapped to two tight
+    // lines. The block is centred on y=296 so it stays aligned with the
+    // umbrella caption whether it is one or two lines. maxW keeps it clear
+    // of the umbrella caption at x=184.
+    drawCondition(60, weatherDescription(w.weatherCode), &FreeSans9pt7b,
+                  /*maxW*/90, /*ySingle*/296, /*y1*/288, /*y2*/303);
+
+    // 6-cell stats grid (2 cols x 3 rows), y 326..~467
     char sWind[16], sHum[8], sUv[16], sPres[12];
     snprintf(sWind, sizeof(sWind), "%d km/h %s",
              (int)lroundf(w.windSpeed), windCompass(w.windDir));
