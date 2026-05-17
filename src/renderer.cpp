@@ -195,15 +195,13 @@ static void drawCurrentConditions(const WeatherData &w) {
              uvDescription(w.uvIndex));
     snprintf(sPres, sizeof(sPres), "%d hPa", (int)lroundf(w.pressure));
 
-    const int c0 = 10, c1 = 144, rowH = 38, gy = 326;
+    const int c0 = 10, c1 = 144, rowH = 54, gy = 326;
     statCell(c0, gy + 0*rowH, StatIcon::Sunrise,    "Alba",       w.sunrise);
     statCell(c1, gy + 0*rowH, StatIcon::Sunset,     "Tramonto",   w.sunset);
     statCell(c0, gy + 1*rowH, StatIcon::Wind,       "Vento",      sWind);
     statCell(c1, gy + 1*rowH, StatIcon::Humidity,   "Umidita",    sHum);
     statCell(c0, gy + 2*rowH, StatIcon::Uv,         "Indice UV",  sUv);
     statCell(c1, gy + 2*rowH, StatIcon::Pressure,   "Pressione",  sPres);
-    statCell(c0, gy + 3*rowH, StatIcon::Visibility, "Visibilita", "N/D");
-    statCell(c1, gy + 3*rowH, StatIcon::AirQuality, "Qualita Aria","N/D");
 
     // column divider
     display.drawLine(COL_DIV, HEAD_LN + 4, COL_DIV, STAT_LN - 2, COLOR_FG);
