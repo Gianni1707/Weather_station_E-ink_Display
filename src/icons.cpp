@@ -246,3 +246,34 @@ void drawUmbrella(int cx, int topY, int s,
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+//  WiFi status icon (header): three upward arcs + node dot; a diagonal
+//  slash over it when disconnected.
+// ---------------------------------------------------------------------------
+void drawWifiIcon(int x, int y, int s, bool connected, uint16_t c) {
+    int cx = x + s / 2;
+    int by = y + s - 3;                       // emitting node (bottom centre)
+
+    display.fillCircle(cx, by, 2, c);         // node dot
+
+    // three concentric signal arcs, fanning straight up (~225°..315°)
+    const int radii[3] = { (int)(s * 0.34f),
+                           (int)(s * 0.58f),
+                           (int)(s * 0.82f) };
+    for (int k = 0; k < 3; ++k) {
+        int rr = radii[k];
+        for (float t = 225.0f; t <= 315.0f; t += 1.5f) {
+            float a  = t * 0.01745329f;
+            int   px = cx + (int)(cosf(a) * rr);
+            int   py = by + (int)(sinf(a) * rr);
+            display.drawPixel(px, py,     c);
+            display.drawPixel(px, py - 1, c);          // ~2 px thick
+        }
+    }
+
+    if (!connected) {                         // "no connection" slash
+        for (int o = -1; o <= 1; ++o)                  // ~3 px thick
+            display.drawLine(x + 1, y + 1 + o, x + s - 1, y + s - 1 + o, c);
+    }
+}
