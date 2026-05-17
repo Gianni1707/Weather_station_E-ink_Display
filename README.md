@@ -1,6 +1,6 @@
 # ESP32 E-Paper Weather Station
 
-Wakes from deep sleep every 30 minutes, connects to WiFi, syncs time over NTP,
+Wakes from deep sleep every 15 minutes, connects to WiFi, syncs time over NTP,
 fetches weather from **Open-Meteo** (no API key), renders an Italian weather
 dashboard on a **7.5" 880×528 3-colour** e-paper panel, then deep-sleeps again.
 
@@ -53,7 +53,7 @@ fallbacks in `include/config.h` (the firmware then can't connect until you
 create one).
 
 The remaining, non-secret settings stay in `include/config.h`: timezone /
-NTP servers, `SLEEP_MINUTES` (deep-sleep duration, default 30), WiFi
+NTP servers, `SLEEP_MINUTES` (deep-sleep duration, default 15), WiFi
 retry/timeout, and battery options. Battery monitoring is **off** by default
 (footer shows `Batteria N/D`); set `BATTERY_ENABLED 1` and the divider
 constants only if you wired an ADC divider.
@@ -89,7 +89,7 @@ _PowerOn : 0 : ... us
 _Update_Full : 1 : 25xxxxxx us      <-- ~25 s, this is normal for a full refresh
 [REND] Done.
 [EPD] Hibernating panel…
-[PWR] Deep sleep for 30 min (1800000000 us)
+[PWR] Deep sleep for 15 min (900000000 us)
 ```
 
 A full refresh physically takes ~25 s and the `_Update_Full :` line prints a

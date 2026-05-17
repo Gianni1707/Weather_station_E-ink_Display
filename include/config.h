@@ -35,7 +35,7 @@
 #define NTP_SERVER_2     "time.nist.gov"
 
 // --- Power / sleep ----------------------------------------------------------
-#define SLEEP_MINUTES    30          // deep-sleep duration between updates
+#define SLEEP_MINUTES    15          // deep-sleep duration between updates
 
 // --- WiFi connection behaviour ---------------------------------------------
 #define WIFI_TIMEOUT_MS  60000UL     // 60 s per attempt

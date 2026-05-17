@@ -36,6 +36,11 @@ void drawWeatherIcon(int x, int y, int size,
 // Draws a ~16x16 stat glyph, all in `color` (black).
 void drawStatIcon(int x, int y, int size, StatIcon ic, uint16_t color);
 
+// WiFi status icon inside an (x, y, size, size) box: upward signal arcs +
+// node dot. When `connected` is false a diagonal slash is drawn over it
+// ("no connection"). Everything in `color`.
+void drawWifiIcon(int x, int y, int size, bool connected, uint16_t color);
+
 // Umbrella widget centred on `cx`, top at `topY`, ~`size` tall (all `color`).
 //   closed  = furled umbrella (used for "maybe rain")
 //   crossed = open umbrella with a big diagonal X (used for "no rain")

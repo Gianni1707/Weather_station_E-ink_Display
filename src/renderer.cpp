@@ -3,6 +3,7 @@
 #include "icons.h"
 #include "config.h"
 #include <time.h>
+#include <WiFi.h>      // header WiFi-status icon reads WiFi.status()
 
 // Stock Adafruit_GFX FreeFonts (ASCII 0x20-0x7E only — no accents/°).
 // Stock set is 9/12/18/24 pt; larger sizes via setTextSize() scaling.
@@ -153,6 +154,9 @@ static const char *italianDayFull(int wday) {            // ASCII-safe
 //  Header: city + date (top-right), hairline
 // ---------------------------------------------------------------------------
 static void drawHeader(const struct tm &now) {
+    // WiFi status, top-left (slash over it when not connected)
+    drawWifiIcon(MARGIN, 12, 40, WiFi.status() == WL_CONNECTED, COLOR_FG);
+
     textRight(EPD_WIDTH - MARGIN, 34, CITY_NAME, F_CITY);
 
     char d[64];
@@ -423,6 +427,7 @@ void renderErrorScreen(const char *title, const char *detail) {
     do {
         display.fillScreen(COLOR_BG);
         display.setTextSize(1);
+        drawWifiIcon(MARGIN, 12, 40, WiFi.status() == WL_CONNECTED, COLOR_FG);
         textCentered(EPD_WIDTH / 2, EPD_HEIGHT / 2 - 50,
                      "STAZIONE METEO", F_CITY);
         textCentered(EPD_WIDTH / 2, EPD_HEIGHT / 2 + 6,
